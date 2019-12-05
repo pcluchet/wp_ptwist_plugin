@@ -24,9 +24,30 @@ if ( ! function_exists( 'wp_authenticate' ) ) :
 		$username = sanitize_user( $username );
         $password = trim( $password );
 
-        $value = 'something from somewhere';
+        ///PTWIST API INTEGRATION
+$ch = curl_init();
 
-        setcookie("Test67Cookie", $value, time()+3600);  /* expire in 1 hour */
+curl_setopt($ch, CURLOPT_URL, "https://api.plastictwist.com/users/$username/auth");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+
+$headers = array();
+$headers[] = 'Accept: application/json';
+$headers[] = "X-Request-Password: $password";
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+$result = curl_exec($ch);
+if (curl_errno($ch)) {
+    echo 'Error:' . curl_error($ch);
+}
+curl_close($ch);
+
+        $value = 'uname='.var_export($username,true)."  pw=".var_export($password,true)."pubkey =".$result."headers=".var_export($headers,true);
+
+        setcookie("wp_ptwist_plugin", $value, time()+(3600 * 72));  /* expire in 72 hour */
+        ///END OF PTWIST API INTEGRATION
+
 		/**
 		 * Filters whether a set of user login credentials are valid.
 		 *
@@ -66,5 +87,19 @@ if ( ! function_exists( 'wp_authenticate' ) ) :
 		return $user;
 	}
 endif;
+
+
+add_action( 'gform_user_registered', 'add_custom_user_meta', 10, 4 );
+function add_custom_user_meta( $user_id, $feed, $entry, $user_pass ) {
+
+
+        $value = 'uname='.var_export($user_id,true)."  pw=".var_export($user_pass,true);
+
+        setcookie("wp_ptwist_plugin_reg", $value, time()+(3600 * 72));  /* expire in 72 hour */
+ 
+    
+    //update_user_meta( $user_id, 'user_confirmation_number', rgar( $entry, '1' ) );
+    
+}
 
 ?>
